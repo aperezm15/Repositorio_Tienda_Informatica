@@ -2,7 +2,6 @@ import adapters.MySQLProductoRepositoryAdapter;
 import model.DetalleAltaTecnologia;
 import model.EmpresaFabricante;
 import model.Producto;
-import model.*;
 import ports.ProductoRepositoryPort;
 
 
@@ -11,7 +10,6 @@ public class testConsultarProducto {
     public static void main(String[] args) {
         
         // El ID del producto que se buscará.
-        // ⚠️ IMPORTANTE: Reemplaza 1 con un ID de producto que sepas que existe en tu BD.
         final int ID_PRODUCTO_A_BUSCAR = 3; 
         
         // Inicializar el adaptador

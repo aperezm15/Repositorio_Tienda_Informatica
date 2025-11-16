@@ -3,8 +3,6 @@
 import model.DetalleAltaTecnologia;
 import model.EmpresaFabricante;
 import model.Producto;
-import model.*;
-import ports.ProductoRepositoryPort;
 
 import java.time.LocalDate;
 
