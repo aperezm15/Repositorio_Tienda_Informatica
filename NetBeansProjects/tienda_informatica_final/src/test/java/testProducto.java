@@ -16,8 +16,8 @@ public class testProducto {
 
         EmpresaFabricante fabricante = new EmpresaFabricante(
             0,
-            "Intel Corp",
-            150000 
+            "Asus Technologies",
+            50000 
         );
 
 
@@ -30,26 +30,26 @@ public class testProducto {
 
         detalle.setFabricante(fabricante); 
 
-        Producto cpu = new Producto(
+        Producto monitor = new Producto(
             0,
-            "CPU Core Ultra 9", 
-            "i9-15900K",   
-            "Procesador de alto rendimiento para gaming y estación de trabajo.",
+            "Monitor Gamer ASUS ROG Swift 27\"",
+            "ROG Swift 27\"",
+            "Monitor gaming de alta resolución y tasa de refresco.",
 
             null, 
-            1 // ID de categoría 1, que asumimos es 'CPU'
+            3 // ID de Categoria 
         );
 
-        cpu.setDetalleAltaTecnologia(detalle);
+        monitor.setDetalleAltaTecnologia(detalle);
 
 
         MySQLProductoRepositoryAdapter adapter = new MySQLProductoRepositoryAdapter();
 
 
-        int idProductoGenerado = adapter.guardarProducto(cpu);
+        int idProductoGenerado = adapter.guardarProducto(monitor);
 
         if (idProductoGenerado > 0) {
-            System.out.println("✅ CPU (Producto de Alta Tecnología) guardado exitosamente con ID: " + idProductoGenerado);
+            System.out.println("✅ Monitor (Producto de Alta Tecnología) guardado exitosamente con ID: " + idProductoGenerado);
         } else {
             System.out.println("❌ Error al guardar el producto. Revisa la consola para la excepción SQL detallada.");
         }
