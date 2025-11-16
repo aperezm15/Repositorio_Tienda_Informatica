@@ -197,8 +197,77 @@ String sql = "SELECT " +
 
     @Override
     public boolean actualizarProducto(Producto producto) {
+        boolean exito = false;
+        
+        try (Connection conn = DriverManager.getConnection(JDBC_URL, USER, PASSWORD)) {
+            conn.setAutoCommit(false); // 🚀 Iniciar Transacción
 
-        throw new UnsupportedOperationException("Unimplemented method 'actualizarProducto'");
+            DetalleAltaTecnologia detalle = producto.getDetalleAltaTecnologia();
+            
+            // -------------------------------------------------------------------
+            // PASO 1: ACTUALIZAR FABRICANTE Y DETALLE (Si es Producto de Alta Tecnología)
+            // -------------------------------------------------------------------
+            if (detalle != null) {
+                
+                // Asegúrate de que el producto *ya exista* y tenga IDs asignados.
+                if (producto.getDetalleAltaTecnologiaId() == null || producto.getDetalleAltaTecnologiaId() == 0) {
+                    // Esto no debería suceder si el producto se insertó correctamente.
+                    System.err.println("Error: Producto de Alta Tecnología sin ID de Detalle.");
+                    conn.rollback();
+                    return false;
+                }
+                
+                // 1.1: Actualizar Empresa Fabricante
+                EmpresaFabricante fabricante = detalle.getFabricante();
+                
+                String sqlUpdateFabricante = "UPDATE empresa_fabricante SET nombre = ?, numero_empleados = ? WHERE idEmpresa_fabricante = ?";
+                try (PreparedStatement psFab = conn.prepareStatement(sqlUpdateFabricante)) {
+                    psFab.setString(1, fabricante.getNombre());
+                    psFab.setInt(2, fabricante.getNumeroEmpleados());
+                    psFab.setInt(3, fabricante.getIdEmpresaFabricante()); // Se actualiza por ID
+                    psFab.executeUpdate();
+                }
+                
+                // 1.2: Actualizar Detalle de Alta Tecnología
+                String sqlUpdateDetalle = "UPDATE detalle_alta_tecnologia SET pais_origen = ?, fecha_fabricacion = ? WHERE idDetalle_alta_tecnologia = ?";
+                try (PreparedStatement psDetalle = conn.prepareStatement(sqlUpdateDetalle)) {
+                    psDetalle.setString(1, detalle.getPaisOrigen());
+                    psDetalle.setDate(2, Date.valueOf(detalle.getFechaFabricacion()));
+                    psDetalle.setInt(3, producto.getDetalleAltaTecnologiaId());
+                    psDetalle.executeUpdate();
+                }
+            }
+
+
+            // -------------------------------------------------------------------
+            // PASO 2: ACTUALIZAR el Producto
+            // -------------------------------------------------------------------
+            String sqlUpdateProducto = "UPDATE producto SET nombre_producto = ?, modelo = ?, descripcion = ?, categoria_producto_idcategoria = ? WHERE idProducto = ?";
+            try (PreparedStatement psProducto = conn.prepareStatement(sqlUpdateProducto)) {
+
+                psProducto.setString(1, producto.getNombreProducto());
+                psProducto.setString(2, producto.getModelo());
+                psProducto.setString(3, producto.getDescripcion());
+                psProducto.setInt(4, producto.getCategoriaProductoId()); 
+                psProducto.setInt(5, producto.getIdProducto()); // Cláusula WHERE
+                
+                if (psProducto.executeUpdate() > 0) {
+                    exito = true;
+                }
+            }
+
+            if (exito) {
+                conn.commit(); // ✅ Confirmar la transacción
+            } else {
+                conn.rollback();
+            }
+            return exito;
+
+        } catch (SQLException e) {
+            System.err.println("❌ ERROR FATAL AL ACTUALIZAR PRODUCTO (ROLLBACK EJECUTADO): " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 
     @Override
