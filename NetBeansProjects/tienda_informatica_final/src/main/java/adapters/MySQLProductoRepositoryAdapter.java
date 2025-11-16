@@ -134,7 +134,7 @@ String sql = "SELECT " +
             // 2. Procesar el resultado
             if (rs.next()) {
                 
-                // 2.1. Mapear el Producto base (p)
+                //Mapear el Producto base (p)
                 producto = new Producto();
                 producto.setIdProducto(rs.getInt("idProducto"));
                 producto.setNombreProducto(rs.getString("nombre_producto"));
@@ -156,7 +156,7 @@ String sql = "SELECT " +
                 producto.setCategoria(categoria);
 
                 
-                // 2.2. Mapear DetalleAltaTecnologia y Fabricante (Solo si existe el ID del Detalle)
+                //Mapear DetalleAltaTecnologia y Fabricante (Solo si existe el ID del Detalle)
                 if (detalleIdFK != null) {
                     
                     // Mapear la Empresa Fabricante (ef)
@@ -204,9 +204,9 @@ String sql = "SELECT " +
 
             DetalleAltaTecnologia detalle = producto.getDetalleAltaTecnologia();
             
-            // -------------------------------------------------------------------
-            // PASO 1: ACTUALIZAR FABRICANTE Y DETALLE (Si es Producto de Alta Tecnología)
-            // -------------------------------------------------------------------
+
+            //ACTUALIZAR FABRICANTE Y DETALLE (Si es Producto de Alta Tecnología)
+
             if (detalle != null) {
                 
                 // Asegúrate de que el producto *ya exista* y tenga IDs asignados.
@@ -217,7 +217,7 @@ String sql = "SELECT " +
                     return false;
                 }
                 
-                // 1.1: Actualizar Empresa Fabricante
+                //Actualizar Empresa Fabricante
                 EmpresaFabricante fabricante = detalle.getFabricante();
                 
                 String sqlUpdateFabricante = "UPDATE empresa_fabricante SET nombre = ?, numero_empleados = ? WHERE idEmpresa_fabricante = ?";
@@ -228,7 +228,7 @@ String sql = "SELECT " +
                     psFab.executeUpdate();
                 }
                 
-                // 1.2: Actualizar Detalle de Alta Tecnología
+                //Actualizar Detalle de Alta Tecnología
                 String sqlUpdateDetalle = "UPDATE detalle_alta_tecnologia SET pais_origen = ?, fecha_fabricacion = ? WHERE idDetalle_alta_tecnologia = ?";
                 try (PreparedStatement psDetalle = conn.prepareStatement(sqlUpdateDetalle)) {
                     psDetalle.setString(1, detalle.getPaisOrigen());
@@ -239,9 +239,9 @@ String sql = "SELECT " +
             }
 
 
-            // -------------------------------------------------------------------
-            // PASO 2: ACTUALIZAR el Producto
-            // -------------------------------------------------------------------
+
+            // ACTUALIZAR el Producto
+
             String sqlUpdateProducto = "UPDATE producto SET nombre_producto = ?, modelo = ?, descripcion = ?, categoria_producto_idcategoria = ? WHERE idProducto = ?";
             try (PreparedStatement psProducto = conn.prepareStatement(sqlUpdateProducto)) {
 
@@ -257,7 +257,7 @@ String sql = "SELECT " +
             }
 
             if (exito) {
-                conn.commit(); // ✅ Confirmar la transacción
+                conn.commit(); 
             } else {
                 conn.rollback();
             }
@@ -272,8 +272,79 @@ String sql = "SELECT " +
 
     @Override
     public boolean eliminarProducto(int id) {
+    
+    // Primero, recuperamos el producto para saber si tiene detalle de alta tecnología.
+    // Usamos el método que ya implementaste.
+    Producto productoAEliminar = buscarProductoPorId(id); 
 
-        System.err.println("❌ ERROR FATAL AL ELIMINAR PRODUCTO: Método no implementado");
-        throw new UnsupportedOperationException("Unimplemented method 'eliminarProducto'");
+    if (productoAEliminar == null) {
+        System.out.println("ADVERTENCIA: Producto con ID " + id + " no encontrado. No se necesita eliminar.");
+        return true; // Consideramos éxito si no existe
     }
+
+    // Obtenemos los IDs de las tablas relacionadas (si existen)
+    Integer detalleId = productoAEliminar.getDetalleAltaTecnologiaId();
+    Integer fabricanteId = null;
+    if (detalleId != null && productoAEliminar.getDetalleAltaTecnologia() != null) {
+        fabricanteId = productoAEliminar.getDetalleAltaTecnologia().getFabricante().getIdEmpresaFabricante();
+    }
+    
+    // Conexión y Transacción
+    try (Connection conn = DriverManager.getConnection(JDBC_URL, USER, PASSWORD)) {
+        conn.setAutoCommit(false); // 🚀 Iniciar Transacción
+
+        // -------------------------------------------------------------------
+        // PASO 1: ELIMINAR el Producto Principal (para liberar la FK)
+        // -------------------------------------------------------------------
+        String sqlDeleteProducto = "DELETE FROM producto WHERE idProducto = ?";
+        try (PreparedStatement psProducto = conn.prepareStatement(sqlDeleteProducto)) {
+            psProducto.setInt(1, id);
+            if (psProducto.executeUpdate() == 0) {
+                System.err.println("Error: No se eliminó el producto con ID " + id);
+                conn.rollback();
+                return false;
+            }
+        }
+        
+        // -------------------------------------------------------------------
+        // PASO 2: ELIMINAR DETALLE_ALTA_TECNOLOGIA (Si existía)
+        // -------------------------------------------------------------------
+        if (detalleId != null) {
+            String sqlDeleteDetalle = "DELETE FROM detalle_alta_tecnologia WHERE idDetalle_alta_tecnologia = ?";
+            try (PreparedStatement psDetalle = conn.prepareStatement(sqlDeleteDetalle)) {
+                psDetalle.setInt(1, detalleId);
+                // No verificamos el resultado, ya que podría ser referenciado por otro producto.
+                // Si la FK de Fabricante es ON DELETE NO ACTION, la eliminación del detalle fallará si el fabricante es compartido.
+                psDetalle.executeUpdate();
+            }
+        }
+        
+        // -------------------------------------------------------------------
+        // PASO 3: ELIMINAR EMPRESA_FABRICANTE (Si existía y si no hay más referencias)
+        // -------------------------------------------------------------------
+        // Nota: Solo se debe eliminar el fabricante si ya no está referenciado por *ningún* otro DetalleAltaTecnologia.
+        // Asumimos que la BD maneja la restricción de FK aquí.
+        if (fabricanteId != null) {
+            String sqlDeleteFabricante = "DELETE FROM empresa_fabricante WHERE idEmpresa_fabricante = ?";
+            try (PreparedStatement psFab = conn.prepareStatement(sqlDeleteFabricante)) {
+                psFab.setInt(1, fabricanteId);
+                psFab.executeUpdate();
+            }
+        }
+        
+        conn.commit(); // ✅ Confirmar la transacción
+        return true;
+
+    } catch (SQLException e) {
+        try {
+            Connection conn = DriverManager.getConnection(JDBC_URL, USER, PASSWORD);
+            if (conn != null) conn.rollback();
+        } catch (SQLException ex) {
+            // Ignorar error al hacer rollback
+        }
+        System.err.println("❌ ERROR FATAL AL ELIMINAR PRODUCTO (ROLLBACK EJECUTADO): " + e.getMessage());
+        e.printStackTrace();
+        return false;
+    }
+        }
 }
