@@ -2,7 +2,7 @@ package model.newpackage;
 
 public class Producto {
     private int idProducto; //PK
-    private String hombreProducto;
+    private String nombreProducto;
     private String modelo;
     private String descripcion;
 
@@ -17,9 +17,9 @@ public class Producto {
     public Producto() {
     }
 
-    public Producto(int idProducto, String hombreProducto, String modelo, String descripcion, Integer detalleAltaTecnologiaId, int categoriaProductoId) {
+    public Producto(int idProducto, String nombreProducto, String modelo, String descripcion, Integer detalleAltaTecnologiaId, int categoriaProductoId) {
         this.idProducto = idProducto;
-        this.hombreProducto = hombreProducto;
+        this.nombreProducto = nombreProducto;
         this.modelo = modelo;
         this.descripcion = descripcion;
         this.categoriaProductoId = categoriaProductoId;
@@ -34,12 +34,12 @@ public class Producto {
     public void setIdProducto(int idProducto) {
         this.idProducto = idProducto;
     }
-    public String getHombreProducto() {
-        return hombreProducto;
+    public String getNombreProducto() {
+        return nombreProducto;
     }
 
-    public void setHombreProducto(String hombreProducto) {
-        this.hombreProducto = hombreProducto;
+    public void setNombreProducto(String nombreProducto) {
+        this.nombreProducto = nombreProducto;
     }
 
     public String getModelo() {
