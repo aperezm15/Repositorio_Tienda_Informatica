@@ -1,4 +1,4 @@
-package main.java.com.tienda.informatica.dominio;
+package model.newpackage;
 
 public class Producto {
     private int idProducto; //PK
